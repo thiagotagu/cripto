@@ -6,8 +6,10 @@ import br.com.cripto.dto.PurchaseResponse;
 import br.com.cripto.service.PortfolioService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,6 +35,12 @@ public class PortfolioController {
     @ResponseStatus(HttpStatus.CREATED)
     public PurchaseResponse createPurchase(@Valid @RequestBody PurchaseRequest request) {
         return portfolioService.createPurchase(request);
+    }
+
+    @DeleteMapping("/purchases/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletePurchase(@PathVariable Long id) {
+        portfolioService.deletePurchase(id);
     }
 
     @GetMapping("/positions")

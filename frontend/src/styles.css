@@ -266,8 +266,18 @@ select {
 .wallet-list .asset-list-header,
 .wallet-list .asset-list-row,
 .alert-list .asset-list-header,
-.alert-list .asset-list-row {
+.alert-list .asset-list-row,
+.purchase-list .asset-list-header,
+.purchase-list .asset-list-row {
   grid-template-columns: 1.6fr 1fr 1fr 1fr 1fr 1fr;
+}
+
+.value-field small {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: 10px;
+  color: #bae6fd;
+  padding: 0.45rem 0.6rem;
 }
 
 .asset-name-cell {

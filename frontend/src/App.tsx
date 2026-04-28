@@ -270,6 +270,12 @@ function App() {
     await loadData()
   }
 
+  async function removePurchase(id: number) {
+    await api.deletePurchase(id)
+    setMessage('Compra excluida com sucesso.')
+    await loadData()
+  }
+
   async function requestPrediction(event: FormEvent) {
     event.preventDefault()
     try {
@@ -341,7 +347,7 @@ function App() {
           <Panel title="Criar alerta">
             <form className="form" onSubmit={submitAlert}>
               <AssetFields value={alertForm} onChange={setAlertForm} />
-              <input placeholder="Preco alvo" value={alertForm.targetPrice} onChange={(e) => setAlertForm({ ...alertForm, targetPrice: e.target.value })} />
+              <MoneyInput label="Preco alvo" value={alertForm.targetPrice} onChange={(value) => setAlertForm({ ...alertForm, targetPrice: value })} />
               <select value={alertForm.direction} onChange={(e) => setAlertForm({ ...alertForm, direction: e.target.value as AlertPayload['direction'] })}>
                 <option value="ABOVE">Quando subir ate o alvo</option>
                 <option value="BELOW">Quando cair ate o alvo</option>
@@ -468,9 +474,9 @@ function App() {
             <Panel title="Registrar compra">
               <form className="form" onSubmit={submitPurchase}>
                 <AssetFields value={purchaseForm} onChange={setPurchaseForm} />
-                <input placeholder="Quantidade" value={purchaseForm.quantity} onChange={(e) => setPurchaseForm({ ...purchaseForm, quantity: e.target.value })} />
-                <input placeholder="Preco unitario" value={purchaseForm.unitPrice} onChange={(e) => setPurchaseForm({ ...purchaseForm, unitPrice: e.target.value })} />
-                <input placeholder="Taxas" value={purchaseForm.fees} onChange={(e) => setPurchaseForm({ ...purchaseForm, fees: e.target.value })} />
+                <NumberField label="Quantidade" value={purchaseForm.quantity} onChange={(value) => setPurchaseForm({ ...purchaseForm, quantity: value })} />
+                <MoneyInput label="Preco unitario" value={purchaseForm.unitPrice} onChange={(value) => setPurchaseForm({ ...purchaseForm, unitPrice: value })} />
+                <MoneyInput label="Taxas" value={purchaseForm.fees} onChange={(value) => setPurchaseForm({ ...purchaseForm, fees: value })} />
                 <input type="date" value={purchaseForm.purchaseDate} onChange={(e) => setPurchaseForm({ ...purchaseForm, purchaseDate: e.target.value })} />
                 <input placeholder="Observacao" value={purchaseForm.note} onChange={(e) => setPurchaseForm({ ...purchaseForm, note: e.target.value })} />
                 <button type="submit">Salvar compra</button>
@@ -478,13 +484,25 @@ function App() {
             </Panel>
 
             <Panel title="Historico de compras">
-              <div className="table">
+              <div className="asset-list purchase-list">
+                <div className="asset-list-header">
+                  <span>Name</span>
+                  <span>Data</span>
+                  <span>Quantidade</span>
+                  <span>Preco unitario</span>
+                  <span>Taxas</span>
+                  <span>Actions</span>
+                </div>
                 {purchases.map((purchase) => (
-                  <div className="row" key={purchase.id}>
-                    <strong>{purchase.asset.symbol}</strong>
-                    <span>{purchase.purchaseDate}</span>
-                    <span>{purchase.quantity} x {money(purchase.unitPrice)}</span>
-                    <span>Taxas: {money(purchase.fees)}</span>
+                  <div className="asset-list-row" key={purchase.id}>
+                    <AssetNameCell name={purchase.asset.name} symbol={purchase.asset.symbol} />
+                    <span>{dateLabel(purchase.purchaseDate)}</span>
+                    <span>{cryptoAmount(purchase.quantity)} {purchase.asset.symbol}</span>
+                    <strong>{money(purchase.unitPrice)}</strong>
+                    <span>{money(purchase.fees)}</span>
+                    <div className="asset-actions">
+                      <button className="icon-button danger" onClick={() => void removePurchase(purchase.id)} title="Excluir compra">Excluir</button>
+                    </div>
                   </div>
                 ))}
                 {!purchases.length && <p>Nenhuma compra registrada.</p>}
@@ -612,6 +630,31 @@ function AssetNameCell({ name, symbol }: { name: string; symbol: string }) {
   )
 }
 
+function MoneyInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const preview = normalizeDecimal(value)
+  const parsed = Number(preview)
+
+  return (
+    <label className="field value-field">
+      <span>{label}</span>
+      <input inputMode="decimal" placeholder="0,00" value={value} onChange={(event) => onChange(event.target.value)} />
+      <small>{Number.isFinite(parsed) && preview ? money(parsed) : 'Informe um valor em USD'}</small>
+    </label>
+  )
+}
+
+function NumberField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const parsed = Number(normalizeDecimal(value))
+
+  return (
+    <label className="field value-field">
+      <span>{label}</span>
+      <input inputMode="decimal" placeholder="0,00000000" value={value} onChange={(event) => onChange(event.target.value)} />
+      <small>{Number.isFinite(parsed) && value.trim() ? cryptoAmount(parsed) : 'Informe a quantidade comprada'}</small>
+    </label>
+  )
+}
+
 function BtcChart({ data }: { data: ChartPoint[] }) {
   if (!data.length) {
     return <div className="chart empty">Carregando grafico...</div>
@@ -687,6 +730,17 @@ function Metric({ label, value, highlight }: { label: string; value: string; hig
 
 function money(value: string | number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD' }).format(Number(value))
+}
+
+function cryptoAmount(value: string | number) {
+  return new Intl.NumberFormat('pt-BR', {
+    maximumFractionDigits: 8,
+    minimumFractionDigits: 0,
+  }).format(Number(value))
+}
+
+function dateLabel(value: string) {
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`))
 }
 
 function normalizePurchasePayload(payload: PurchasePayload): PurchasePayload {

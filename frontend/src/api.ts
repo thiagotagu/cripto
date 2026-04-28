@@ -113,6 +113,7 @@ export const api = {
   purchases: () => request<Purchase[]>('/portfolio/purchases'),
   createPurchase: (payload: PurchasePayload) =>
     request<Purchase>('/portfolio/purchases', { method: 'POST', body: JSON.stringify(payload) }),
+  deletePurchase: (id: number) => request<void>(`/portfolio/purchases/${id}`, { method: 'DELETE' }),
   alerts: () => request<Alert[]>('/alerts'),
   createAlert: (payload: AlertPayload) =>
     request<Alert>('/alerts', { method: 'POST', body: JSON.stringify(payload) }),

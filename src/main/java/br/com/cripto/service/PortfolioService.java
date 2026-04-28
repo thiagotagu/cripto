@@ -53,6 +53,13 @@ public class PortfolioService {
             .toList();
     }
 
+    @Transactional
+    public void deletePurchase(Long id) {
+        Purchase purchase = purchaseRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Compra nao encontrada: " + id));
+        purchaseRepository.delete(purchase);
+    }
+
     @Transactional(readOnly = true)
     public List<PortfolioPositionResponse> positions() {
         Map<String, List<Purchase>> grouped = purchaseRepository.findAll().stream()
