@@ -48,6 +48,7 @@ public class AlertService {
         return toResponse(alertRepository.save(alert));
     }
 
+    @Transactional(readOnly = true)
     public List<AlertResponse> list() {
         return alertRepository.findAll().stream()
             .map(this::toResponse)

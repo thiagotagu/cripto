@@ -11,12 +11,15 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PortfolioService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(PortfolioService.class);
     private static final int MONEY_SCALE = 8;
 
     private final AssetService assetService;
@@ -43,12 +46,14 @@ public class PortfolioService {
         return toResponse(purchaseRepository.save(purchase));
     }
 
+    @Transactional(readOnly = true)
     public List<PurchaseResponse> listPurchases() {
         return purchaseRepository.findAllByOrderByPurchaseDateDesc().stream()
             .map(this::toResponse)
             .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<PortfolioPositionResponse> positions() {
         Map<String, List<Purchase>> grouped = purchaseRepository.findAll().stream()
             .collect(Collectors.groupingBy(purchase -> purchase.getAsset().getId() + ":" + purchase.getCurrency()));
@@ -69,7 +74,7 @@ public class PortfolioService {
             .map(purchase -> purchase.getQuantity().multiply(purchase.getUnitPrice()).add(purchase.getFees()))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal averagePrice = totalInvested.divide(totalQuantity, MONEY_SCALE, RoundingMode.HALF_UP);
-        BigDecimal currentPrice = priceProvider.getCurrentPrice(asset, currency);
+        BigDecimal currentPrice = currentPriceOrZero(asset, currency);
         BigDecimal currentValue = currentPrice.multiply(totalQuantity).setScale(MONEY_SCALE, RoundingMode.HALF_UP);
         BigDecimal profitLoss = currentValue.subtract(totalInvested).setScale(MONEY_SCALE, RoundingMode.HALF_UP);
         BigDecimal profitLossPercent = totalInvested.compareTo(BigDecimal.ZERO) == 0
@@ -87,6 +92,15 @@ public class PortfolioService {
             profitLoss,
             profitLossPercent
         );
+    }
+
+    private BigDecimal currentPriceOrZero(Asset asset, String currency) {
+        try {
+            return priceProvider.getCurrentPrice(asset, currency);
+        } catch (RuntimeException exception) {
+            LOGGER.warn("Falha ao buscar cotacao de {} em {}: {}", asset.getCoingeckoId(), currency, exception.getMessage());
+            return BigDecimal.ZERO.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+        }
     }
 
     private PurchaseResponse toResponse(Purchase purchase) {
